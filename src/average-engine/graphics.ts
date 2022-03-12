@@ -1,16 +1,18 @@
 import {EventRegistry, Clock} from "./system";
 import {Time} from "./units";
 
-export interface Displayable {
-    get width(): number
+export abstract class Displayable {
+    abstract get width(): number
 
-    get height(): number
+    abstract get height(): number
+
+    protected abstract _render(context: CanvasRenderingContext2D, x: number, y: number, w: number | null, h: number | null): void
 }
 
-export interface Renderable extends Displayable {
-    get context(): CanvasRenderingContext2D
+export abstract class Renderable extends Displayable {
+    abstract get context(): CanvasRenderingContext2D
 
-    get renderer(): Renderer
+    abstract get renderer(): Renderer
 
 }
 
@@ -46,16 +48,26 @@ export class Renderer {
     public clear() {
         this.context.clearRect(0, 0, this.renderable.width, this.renderable.height)
     }
+
+    public render(displayable: Displayable, x: number, y: number, w: number | null = null, h: number | null = null) {
+        DisplayableRenderer.draw(this.context, displayable, x, y, w, h)
+    }
 }
 
-export abstract class Game implements Renderable {
+abstract class DisplayableRenderer extends Displayable {
+    public static draw(context: CanvasRenderingContext2D, displayable: Displayable, x: number, y: number, w: number | null = null, h: number | null = null) {
+        (displayable as DisplayableRenderer)._render(context, x, y, w, h)
+    }
+}
+
+export abstract class Game extends Renderable {
 
     private static _activeWindowCount = 0
     public readonly htmlElement: HTMLCanvasElement
     public readonly eventRegistries = {
         setup: new EventRegistry<() => Promise<void>>(),
         update: new EventRegistry<(deltaTime: Time) => Promise<void>>(),
-        render: new EventRegistry<(deltaTime: Time) => Promise<void>>(),
+        render: new EventRegistry<(renderer: Renderer, deltaTime: Time) => Promise<void>>(),
         lateUpdate: new EventRegistry<(deltaTime: Time) => Promise<void>>(),
         dispose: new EventRegistry<() => Promise<void>>(),
 
@@ -71,6 +83,7 @@ export abstract class Game implements Renderable {
     }
 
     protected constructor() {
+        super();
         this.htmlElement = document.createElement('canvas')
         this.htmlElement.style.backgroundColor = 'black'
 
@@ -198,7 +211,7 @@ export abstract class Game implements Renderable {
                     })
 
                     await this.eventRegistries.render.execute(async callback => {
-                        await callback(dt)
+                        await callback(this.renderer, dt)
                     })
 
                     await this.eventRegistries.lateUpdate.execute(async callback => {
@@ -220,5 +233,47 @@ export abstract class Game implements Renderable {
 
     }
 
+    protected _render(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+    }
+
+
+}
+
+export class Texture extends Displayable {
+
+    private _loaded = false
+
+    constructor(private readonly image: HTMLImageElement, loaded: boolean) {
+        super()
+        this._loaded = loaded
+        if (!loaded) {
+            const listener = () => {
+                image.removeEventListener('load', listener)
+                this._loaded = true
+            }
+            image.addEventListener('load', listener)
+        }
+    }
+
+    get loaded(): boolean {
+        return this._loaded
+    }
+
+    protected _render(context: CanvasRenderingContext2D, x: number, y: number, w: number | null = null, h: number | null = null): void {
+        if (this.image) {
+            if (w || h)
+                context.drawImage(this.image, x, y, w === null ? this.image.width : w, h === null ? this.image.height : h)
+            else
+                context.drawImage(this.image, x, y)
+        }
+    }
+
+    get width(): number {
+        return this.image.width;
+    }
+
+    get height(): number {
+        return this.image.height;
+    }
 
 }
