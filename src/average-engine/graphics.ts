@@ -255,7 +255,7 @@ export abstract class Game extends Renderable {
                     eventQueue.push({event: ev, type: MOUSE_UP})
                 })
                 this.htmlElement.addEventListener('click', ev => {
-                    eventQueue.push({event: ev, type: MOUSE_UP})
+                    eventQueue.push({event: ev, type: MOUSE_CLICK})
                 })
 
                 // Loop

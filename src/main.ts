@@ -16,6 +16,9 @@ class MyGame extends Game {
         this.eventRegistries.dispose.register(async () => {
             console.log("Game stopped")
         })
+        this.eventRegistries.click.register(async (button, x, y) => {
+            console.log(button)
+        })
         this.eventRegistries.render.register(async (renderer, dt) => {
             renderer.clear()
             renderer.fillRect(0, 0, 100, 100)
