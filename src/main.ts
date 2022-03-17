@@ -1,5 +1,5 @@
 import {Clock} from "./average-engine/system";
-import {Game, Renderer, Texture} from "./average-engine/graphics";
+import {Game, RenderableTexture, Renderer, Texture} from "./average-engine/graphics";
 import {AsyncResourceLoader, Font} from "./average-engine/resources";
 
 class MyGame extends Game {
@@ -11,6 +11,15 @@ class MyGame extends Game {
         this.eventRegistries.setup.register(async () => {
             texture = await AsyncResourceLoader.loadTexture('https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png')
             font = await AsyncResourceLoader.loadFont('awa.ttf')
+
+
+            {
+                const renderer = rt.renderer
+                renderer.setFillColor(1, 0.5, 0.5)
+                renderer.fillRect(0, 0, rt.width, rt.height)
+                renderer.setFillColor(0, 1, 0)
+                renderer.fillText("Hello", 0, 0)
+            }
             console.log("Game started")
         })
         this.eventRegistries.dispose.register(async () => {
@@ -20,6 +29,7 @@ class MyGame extends Game {
             console.log(button)
         })
         let angle = 0
+        let rt = new RenderableTexture(100, 100)
         this.eventRegistries.render.register(async (renderer, dt) => {
             renderer.clear()
             // renderer.fillRect(0, 0, 100, 100)
@@ -37,19 +47,22 @@ class MyGame extends Game {
 
             renderer.translate(this.width / 2, this.height / 2)
             renderer.rotate(angle)
-            renderer.translate(-width / 2, - renderer.getTextSize() / 2)
+            renderer.translate(-width / 2, -renderer.getTextSize() / 2)
             renderer.setStrokeColor(1, 0, 0)
             renderer.strokeRect(0, 0, width, renderer.getTextSize())
             renderer.setStrokeColor(0, 1, 0)
             renderer.strokeText(m, 0, 0)
 
-            renderer.popMatrix()
+            renderer.image(rt, 100, 100)
+            renderer.setStrokeColor()
+            renderer.setStrokeWeight(2)
+            renderer.strokeLine(0, 0, 100, 100)
 
+            renderer.popMatrix()
             renderer.setTextSize(24)
             renderer.fillText('FPS: ' + this.statistics.fps.average.toFixed(0) + ' / ' + this.statistics.fps.max.toFixed(0) + ' / ' + this.statistics.fps.min.toFixed(0), 0, 0)
+
             renderer.fillRect(0, 24, 100, 1)
-
-
         })
     }
 }

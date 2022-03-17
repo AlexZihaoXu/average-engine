@@ -166,6 +166,11 @@ export class Renderer {
         this.transformMatrices[this.transformMatrices.length - 1] = DOMMatrix.fromMatrix(this.context.getTransform())
     }
 
+    public scale(x: number, y: number) {
+        this.context.scale(x, y)
+        this.transformMatrices[this.transformMatrices.length - 1] = DOMMatrix.fromMatrix(this.context.getTransform())
+    }
+
     public pushMatrix() {
         this.transformMatrices.push(DOMMatrix.fromMatrix(this.context.getTransform()))
     }
@@ -412,6 +417,43 @@ export class Game extends Renderable {
     }
 
     protected _render(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+    }
+
+}
+
+export class RenderableTexture extends Renderable {
+    private readonly _htmlCanvas: HTMLCanvasElement
+
+    constructor(width: number, height: number) {
+        super();
+        this._htmlCanvas = document.createElement('canvas')
+        this._htmlCanvas.width = width
+        this._htmlCanvas.height = height
+    }
+
+    protected _render(context: CanvasRenderingContext2D, x: number, y: number, w: number | null, h: number | null): void {
+
+        if (w || h)
+            context.drawImage(this._htmlCanvas, x, y, w === null ? this._htmlCanvas.width : w, h === null ? this._htmlCanvas.height : h)
+        else
+            context.drawImage(this._htmlCanvas, x, y)
+
+    }
+
+    get context(): CanvasRenderingContext2D {
+        return this._htmlCanvas.getContext('2d') as CanvasRenderingContext2D;
+    }
+
+    get height(): number {
+        return this._htmlCanvas.height;
+    }
+
+    get renderer(): Renderer {
+        return new Renderer(this);
+    }
+
+    get width(): number {
+        return this._htmlCanvas.width;
     }
 
 }
