@@ -1,6 +1,7 @@
-import {Clock} from "./average-engine/system";
+import {Clock, sleep} from "./average-engine/system";
 import {Game, RenderableTexture, Renderer, Texture} from "./average-engine/graphics";
 import {AsyncResourceLoader, Font} from "./average-engine/resources";
+import {audioContext, Sound, SoundManager, SoundSource} from "./average-engine/sounds";
 
 class MyGame extends Game {
     constructor() {
@@ -20,13 +21,35 @@ class MyGame extends Game {
                 renderer.setFillColor(0, 1, 0)
                 renderer.fillText("Hello", 0, 0)
             }
+            SoundManager.init()
             console.log("Game started")
         })
         this.eventRegistries.dispose.register(async () => {
             console.log("Game stopped")
         })
         this.eventRegistries.click.register(async (button, x, y) => {
-            console.log(button)
+            let source = new SoundSource()
+            var myArrayBuffer = audioContext.createBuffer(2, audioContext.sampleRate * 3, audioContext.sampleRate);
+
+// Fill the buffer with white noise;
+// just random values between -1.0 and 1.0
+            for (var channel = 0; channel < myArrayBuffer.numberOfChannels; channel++) {
+                // This gives us the actual array that contains the data
+                var nowBuffering = myArrayBuffer.getChannelData(channel);
+                for (var i = 0; i < myArrayBuffer.length / 16; i++) {
+                    // Math.random() is in [0; 1.0]
+                    // audio needs to be in [-1.0; 1.0]
+                    nowBuffering[i] = Math.cos(i * i / 1000);
+                }
+            }
+
+
+            source.sound = new Sound(myArrayBuffer)
+            source.play();
+            (async () => {
+                await sleep(1000)
+                source.dispose()
+            })();
         })
         let angle = 0
         let rt = new RenderableTexture(100, 100)
