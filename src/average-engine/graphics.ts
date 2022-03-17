@@ -1,5 +1,6 @@
 import {EventRegistry, Clock} from "./system";
 import {Time} from "./units";
+import {Font} from "./resources";
 
 export abstract class Displayable {
     abstract get width(): number
@@ -16,13 +17,44 @@ export abstract class Renderable extends Displayable {
 
 }
 
+function RGBAToHex(r: number, g: number, b: number, a: number) {
+    let red = Math.max(0, Math.min(255, Math.round(r * 255))).toString(16)
+    let green = Math.max(0, Math.min(255, Math.round(g * 255))).toString(16)
+    let blue = Math.max(0, Math.min(255, Math.round(b * 255))).toString(16)
+    let alpha = Math.max(0, Math.min(255, Math.round(a * 255))).toString(16)
+
+    while (red.length < 2) {
+        red = '0' + red
+    }
+    while (green.length < 2) {
+        green = '0' + green
+    }
+    while (blue.length < 2) {
+        blue = '0' + blue
+    }
+    while (alpha.length < 2) {
+        alpha = '0' + alpha
+    }
+
+    return '#' + red + green + blue + alpha
+
+}
+
+abstract class FontFamilyChecker extends Font {
+    public static getFamily(font: Font): string {
+        return (font as FontFamilyChecker).font.family
+    }
+}
+
 export class Renderer {
-    private _r = 1
-    private _g = 1
-    private _b = 1
-    private _a = 1
+    private _fill = '#fff'
+    private _stroke = '#fff'
+    private _w = 1
+    private _textSize = 16
+    private _font: Font | null = null
     public readonly context: CanvasRenderingContext2D
     public readonly renderable: Renderable
+    public transformMatrices: DOMMatrix[] = [new DOMMatrix()]
 
     constructor(renderable: Renderable) {
         this.context = renderable.context
@@ -30,14 +62,43 @@ export class Renderer {
     }
 
     private applySettings() {
-        this.context.fillStyle = `rgba(${Math.floor(Math.min(255, Math.max(0, this._r * 255)))}, ${Math.floor(Math.min(255, Math.max(0, this._g * 255)))}, ${Math.floor(Math.max(255, Math.min(0, this._b * 255)))}, ${this._a})`
+        this.context.setTransform(this.transformMatrices[this.transformMatrices.length - 1])
+        if (this._font)
+            this.context.font = this._textSize.toString() + 'px ' + FontFamilyChecker.getFamily(this._font)
+        else
+            this.context.font = this._textSize.toString() + 'px Arial'
+
+        this.context.lineWidth = this._w
+        this.context.strokeStyle = this._stroke
+        this.context.fillStyle = this._fill
     }
 
+    // Setters
+
     public setFillColor(r: number = 1, g: number = 1, b: number = 1, a: number = 1) {
-        this._r = r
-        this._g = g
-        this._b = b
-        this._a = a
+        this._fill = RGBAToHex(r, g, b, a)
+    }
+
+    public setStrokeColor(r: number = 1, g: number = 1, b: number = 1, a: number = 1) {
+        this._stroke = RGBAToHex(r, g, b, a)
+    }
+
+    public setStrokeWeight(w: number) {
+        this._w = w
+    }
+
+    public setFont(font: Font) {
+        this._font = font
+    }
+
+    public setTextSize(size: number) {
+        this._textSize = size
+    }
+
+    // Fill Shapes
+
+    public clear() {
+        this.context.clearRect(0, 0, this.renderable.width, this.renderable.height)
     }
 
     public fillRect(x: number, y: number, w: number, h: number) {
@@ -45,12 +106,42 @@ export class Renderer {
         this.context.fillRect(x, y, w, h)
     }
 
-    public clear() {
-        this.context.clearRect(0, 0, this.renderable.width, this.renderable.height)
+    public image(displayable: Displayable, x: number, y: number, w: number | null = null, h: number | null = null) {
+        DisplayableRenderer.draw(this.context, displayable, x, y, w, h)
     }
 
-    public render(displayable: Displayable, x: number, y: number, w: number | null = null, h: number | null = null) {
-        DisplayableRenderer.draw(this.context, displayable, x, y, w, h)
+    public fillText(text: string, x: number, y: number) {
+        this.applySettings()
+        this.context.fillText(text, x, y)
+    }
+
+    // Stroke Shapes
+
+    public strokeRect(x: number, y: number, w: number, h: number) {
+        this.applySettings()
+        this.context.strokeRect(x, y, w, h)
+    }
+
+    public strokeLine(x1: number, y1: number, x2: number, y2: number) {
+        this.applySettings()
+        this.context.beginPath()
+        this.context.moveTo(x1, y1)
+        this.context.lineTo(x2, y2)
+        this.context.stroke()
+    }
+
+    // Transformations
+
+    public translate(x: number, y: number) {
+        this.transformMatrices[this.transformMatrices.length - 1].translateSelf(x, y)
+    }
+
+    public rotate(angle: number) {
+        this.transformMatrices[this.transformMatrices.length - 1].rotateSelf(angle)
+    }
+
+    public pushMatrix() {
+        this.transformMatrices.push(DOMMatrix.fromMatrix(this.transformMatrices[this.transformMatrices.length - 1]))
     }
 }
 
@@ -127,6 +218,7 @@ export abstract class Game extends Renderable {
     get renderer(): Renderer {
         return new Renderer(this);
     }
+
 
     public start() {
 
@@ -235,7 +327,6 @@ export abstract class Game extends Renderable {
 
     protected _render(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
     }
-
 
 }
 
