@@ -1,5 +1,5 @@
 import {Clock} from "./average-engine/system";
-import {Game, Texture} from "./average-engine/graphics";
+import {Game, Renderer, Texture} from "./average-engine/graphics";
 import {AsyncResourceLoader, Font} from "./average-engine/resources";
 
 class MyGame extends Game {
@@ -19,12 +19,37 @@ class MyGame extends Game {
         this.eventRegistries.click.register(async (button, x, y) => {
             console.log(button)
         })
+        let angle = 0
         this.eventRegistries.render.register(async (renderer, dt) => {
             renderer.clear()
-            renderer.fillRect(0, 0, 100, 100)
+            // renderer.fillRect(0, 0, 100, 100)
             renderer.setFont(font)
-            renderer.setTextSize((Math.cos(timer.elapsedTime.seconds * 5) + 1) / 2 * 10 + 40)
-            renderer.fillText("Hello world", 500, 500)
+            renderer.setTextSize((Math.cos(timer.elapsedTime.seconds * 5) + 1) / 2 * 25 + 100)
+            // renderer.setTextSize(100)
+
+            angle += dt.seconds
+
+            let m = 'awa'
+
+            const width = renderer.getTextWidth(m)
+
+            renderer.pushMatrix()
+
+            renderer.translate(this.width / 2, this.height / 2)
+            renderer.rotate(angle)
+            renderer.translate(-width / 2, - renderer.getTextSize() / 2)
+            renderer.setStrokeColor(1, 0, 0)
+            renderer.strokeRect(0, 0, width, renderer.getTextSize())
+            renderer.setStrokeColor(0, 1, 0)
+            renderer.fillText(m, 0, 0)
+
+            renderer.popMatrix()
+
+            renderer.setTextSize(24)
+            renderer.fillText('FPS: 233', 0, 0)
+            renderer.fillRect(0, 24, 100, 1)
+
+
         })
     }
 }

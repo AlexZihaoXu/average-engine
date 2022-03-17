@@ -54,23 +54,26 @@ export class Renderer {
     private _font: Font | null = null
     public readonly context: CanvasRenderingContext2D
     public readonly renderable: Renderable
-    public transformMatrices: DOMMatrix[] = [new DOMMatrix()]
+    public transformMatrices: DOMMatrix[] = []
 
     constructor(renderable: Renderable) {
         this.context = renderable.context
         this.renderable = renderable
+        this.transformMatrices.push(new DOMMatrix())
     }
 
     private applySettings() {
+
         this.context.setTransform(this.transformMatrices[this.transformMatrices.length - 1])
         if (this._font)
-            this.context.font = this._textSize.toString() + 'px ' + FontFamilyChecker.getFamily(this._font)
+            this.context.font = Math.round(this._textSize).toString() + 'px ' + FontFamilyChecker.getFamily(this._font)
         else
-            this.context.font = this._textSize.toString() + 'px Arial'
+            this.context.font = Math.round(this._textSize).toString() + 'px Arial'
 
         this.context.lineWidth = this._w
         this.context.strokeStyle = this._stroke
         this.context.fillStyle = this._fill
+        this.context.textBaseline = 'top'
     }
 
     // Setters
@@ -95,9 +98,20 @@ export class Renderer {
         this._textSize = size
     }
 
+    // Getters
+
+    public getTextSize() {
+        return this._textSize
+    }
+
+    public getStrokeWeight() {
+        return this._w
+    }
+
     // Fill Shapes
 
     public clear() {
+        this.applySettings()
         this.context.clearRect(0, 0, this.renderable.width, this.renderable.height)
     }
 
@@ -113,6 +127,11 @@ export class Renderer {
     public fillText(text: string, x: number, y: number) {
         this.applySettings()
         this.context.fillText(text, x, y)
+    }
+
+    public getTextWidth(text: string) {
+        this.applySettings()
+        return this.context.measureText(text).width
     }
 
     // Stroke Shapes
@@ -133,15 +152,22 @@ export class Renderer {
     // Transformations
 
     public translate(x: number, y: number) {
-        this.transformMatrices[this.transformMatrices.length - 1].translateSelf(x, y)
+        this.context.translate(x, y)
+        this.transformMatrices[this.transformMatrices.length - 1] = DOMMatrix.fromMatrix(this.context.getTransform())
     }
 
     public rotate(angle: number) {
-        this.transformMatrices[this.transformMatrices.length - 1].rotateSelf(angle)
+        this.context.rotate(angle)
+        this.transformMatrices[this.transformMatrices.length - 1] = DOMMatrix.fromMatrix(this.context.getTransform())
     }
 
     public pushMatrix() {
-        this.transformMatrices.push(DOMMatrix.fromMatrix(this.transformMatrices[this.transformMatrices.length - 1]))
+        this.transformMatrices.push(DOMMatrix.fromMatrix(this.context.getTransform()))
+    }
+
+    public popMatrix() {
+        this.transformMatrices.pop()
+        this.applySettings()
     }
 }
 
