@@ -41,12 +41,12 @@ class MyGame extends Game {
             renderer.setStrokeColor(1, 0, 0)
             renderer.strokeRect(0, 0, width, renderer.getTextSize())
             renderer.setStrokeColor(0, 1, 0)
-            renderer.fillText(m, 0, 0)
+            renderer.strokeText(m, 0, 0)
 
             renderer.popMatrix()
 
             renderer.setTextSize(24)
-            renderer.fillText('FPS: 233', 0, 0)
+            renderer.fillText('FPS: ' + this.statistics.fps.average.toFixed(0) + ' / ' + this.statistics.fps.max.toFixed(0) + ' / ' + this.statistics.fps.min.toFixed(0), 0, 0)
             renderer.fillRect(0, 24, 100, 1)
 
 

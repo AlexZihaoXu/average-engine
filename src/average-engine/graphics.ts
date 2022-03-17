@@ -149,6 +149,11 @@ export class Renderer {
         this.context.stroke()
     }
 
+    public strokeText(text: string, x: number, y: number) {
+        this.applySettings()
+        this.context.strokeText(text, x, y)
+    }
+
     // Transformations
 
     public translate(x: number, y: number) {
@@ -177,10 +182,23 @@ abstract class DisplayableRenderer extends Displayable {
     }
 }
 
-export abstract class Game extends Renderable {
+export type GameStatistics = {
+    fps: {
+        average: number,
+        max: number,
+        min: number,
+        now: number
+    },
+    dt: Time,
+    elapsedTime: Time,
+    dimension: { w: number, h: number }
+}
+
+export class Game extends Renderable {
 
     private static _activeWindowCount = 0
     public readonly htmlElement: HTMLCanvasElement
+    private _statistic: GameStatistics | null = null
     public readonly eventRegistries = {
         setup: new EventRegistry<() => Promise<void>>(),
         update: new EventRegistry<(deltaTime: Time) => Promise<void>>(),
@@ -199,7 +217,7 @@ export abstract class Game extends Renderable {
         // 'touchmove': new CallbackRegistry<(w: number, h: number) => Promise<void>>(),
     }
 
-    protected constructor() {
+    constructor() {
         super();
         this.htmlElement = document.createElement('canvas')
         this.htmlElement.style.backgroundColor = 'black'
@@ -245,6 +263,9 @@ export abstract class Game extends Renderable {
         return new Renderer(this);
     }
 
+    get statistics(): GameStatistics {
+        return Object.assign({}, this._statistic)
+    }
 
     public start() {
 
@@ -284,9 +305,48 @@ export abstract class Game extends Renderable {
                     eventQueue.push({event: ev, type: MOUSE_CLICK})
                 })
 
+                const elapseClock = new Clock()
+                const fpsStatisticList: { time: number, dt: number }[] = []
+
                 // Loop
                 const loop = async () => {
                     const dt = dtClock.delta
+                    {
+                        const now = elapseClock.elapsedTime.milliseconds
+                        fpsStatisticList.push({time: now, dt: dt.milliseconds})
+
+                        while (now - fpsStatisticList[0].time > 1000) {
+                            fpsStatisticList.splice(0, 1)
+                        }
+
+                        let lowest: number = 1 / 0
+                        let highest: number = -1 / 0
+                        let average = 0
+                        let current = 1 / dt.seconds
+
+                        for (let stat of fpsStatisticList) {
+                            const fps = 1000 / stat.dt
+                            if (fps > highest)
+                                highest = fps
+                            if (fps < lowest)
+                                lowest = fps
+                            average += fps
+                        }
+
+                        average /= fpsStatisticList.length
+
+                        this._statistic = {
+                            fps: {
+                                average: average,
+                                max: highest,
+                                min: lowest,
+                                now: current
+                            },
+                            dt: new Time(dt.milliseconds),
+                            elapsedTime: new Time(now),
+                            dimension: {w: this.width, h: this.height}
+                        }
+                    }
 
                     while (eventQueue.length) {
                         const event = eventQueue[0]
